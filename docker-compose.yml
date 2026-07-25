@@ -1,11 +1,11 @@
 services:
   kiro-rs:
-    image: ${KIRO_RS_IMAGE:-zyphrzero/kiro-rs:latest}
-    container_name: kiro-rs
+    image: ${KIRO_RS_IMAGE:-kiro-rs:opus5}
+    container_name: kiro-rs-opus5
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "8990:8990"
+      - "8991:8991"
     volumes:
       - ./data/:/app/config/
     restart: unless-stopped

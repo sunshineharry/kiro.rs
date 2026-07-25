@@ -226,6 +226,12 @@ pub fn map_model(model: &str) -> Option<String> {
             Some("claude-opus-4.5".to_string())
         } else if model_lower.contains("4-6") || model_lower.contains("4.6") {
             Some("claude-opus-4.6".to_string())
+        } else if model_lower.contains("opus-5")
+            || model_lower.contains("opus5")
+            || model_lower.contains("opus.5")
+        {
+            // 精确匹配 5 代，避免命中 4.x（4-5 / 4.6 等在前面已拦截）
+            Some("claude-opus-5".to_string())
         } else {
             None
         }
@@ -257,6 +263,7 @@ pub fn get_context_window_size(model: &str) -> i32 {
                 || mapped == "claude-opus-4.6"
                 || mapped == "claude-opus-4.7"
                 || mapped == "claude-opus-4.8"
+                || mapped == "claude-opus-5"
                 || mapped == "claude-fable-5" =>
         {
             1_000_000
@@ -1856,6 +1863,29 @@ mod tests {
         assert_eq!(get_context_window_size("claude-sonnet-5"), 1_000_000);
         // 不应误判 legacy claude-3-5-sonnet
         assert_eq!(map_model("claude-3-5-sonnet-20241022"), None);
+    }
+
+    #[test]
+    fn test_map_model_opus_5() {
+        assert_eq!(map_model("claude-opus-5"), Some("claude-opus-5".to_string()));
+        assert_eq!(
+            map_model("claude-opus-5-20260720-thinking"),
+            Some("claude-opus-5".to_string())
+        );
+        // 点号形式 opus.5 也应命中
+        assert_eq!(
+            map_model("claude-opus.5"),
+            Some("claude-opus-5".to_string())
+        );
+        assert_eq!(get_context_window_size("claude-opus-5"), 1_000_000);
+        // opus-5 支持原生 reasoning 与 xhigh
+        assert!(model_supports_native_reasoning("claude-opus-5"));
+        assert!(model_supports_xhigh_effort("claude-opus-5"));
+        // 4.x 不应被误判为 5 代
+        assert_eq!(
+            map_model("claude-opus-4-5"),
+            Some("claude-opus-4.5".to_string())
+        );
     }
 
     #[test]
