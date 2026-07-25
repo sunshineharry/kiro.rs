@@ -49,6 +49,12 @@ pub struct Model {
     #[serde(rename = "type")]
     pub model_type: String,
     pub max_tokens: i32,
+    /// 模型上下文窗口（最大输入 token 数）。
+    ///
+    /// 标准 Anthropic `/v1/models` 会返回该字段，Claude Code 等客户端据此
+    /// 判定可用上下文并做自动压缩/预算。缺失时客户端会回退到保守默认值
+    /// （常见 200K），导致 1M 模型被误当成小窗口。此处显式上报以对齐真实能力。
+    pub max_input_tokens: i32,
 }
 
 /// 模型列表响应

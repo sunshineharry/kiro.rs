@@ -28,7 +28,7 @@ use std::time::Duration;
 use tokio::time::interval;
 use uuid::Uuid;
 
-use super::converter::{ConversionError, convert_request_with_mode};
+use super::converter::{ConversionError, convert_request_with_mode, get_context_window_size};
 use super::middleware::{AppState, KeyContext};
 use super::stream::{BufferedStreamContext, SseEvent, StreamContext};
 use super::types::{
@@ -383,7 +383,7 @@ fn resolve_usage_input_tokens(
 }
 
 fn available_models() -> Vec<Model> {
-    vec![
+    let mut models = vec![
         Model {
             id: "gpt-5.6-sol".to_string(),
             object: "model".to_string(),
@@ -392,6 +392,7 @@ fn available_models() -> Vec<Model> {
             display_name: "GPT-5.6 Sol".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "gpt-5.6-terra".to_string(),
@@ -401,6 +402,7 @@ fn available_models() -> Vec<Model> {
             display_name: "GPT-5.6 Terra".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "gpt-5.6-luna".to_string(),
@@ -410,6 +412,7 @@ fn available_models() -> Vec<Model> {
             display_name: "GPT-5.6 Luna".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-fable-5".to_string(),
@@ -419,6 +422,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Fable 5".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-fable-5-thinking".to_string(),
@@ -428,6 +432,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Fable 5 (Thinking)".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-sonnet-5".to_string(),
@@ -437,6 +442,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Sonnet 5".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-sonnet-5-thinking".to_string(),
@@ -446,6 +452,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Sonnet 5 (Thinking)".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-opus-5".to_string(),
@@ -455,6 +462,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Opus 5".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-opus-5-thinking".to_string(),
@@ -464,6 +472,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Opus 5 (Thinking)".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-opus-4-8".to_string(),
@@ -473,6 +482,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Opus 4.8".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-opus-4-8-thinking".to_string(),
@@ -482,6 +492,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Opus 4.8 (Thinking)".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-sonnet-4-8".to_string(),
@@ -491,6 +502,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Sonnet 4.8".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-sonnet-4-8-thinking".to_string(),
@@ -500,6 +512,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Sonnet 4.8 (Thinking)".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-opus-4-7".to_string(),
@@ -509,6 +522,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Opus 4.7".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-opus-4-7-thinking".to_string(),
@@ -518,6 +532,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Opus 4.7 (Thinking)".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-opus-4-6".to_string(),
@@ -527,6 +542,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Opus 4.6".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-opus-4-6-thinking".to_string(),
@@ -536,6 +552,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Opus 4.6 (Thinking)".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-sonnet-4-6".to_string(),
@@ -545,6 +562,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Sonnet 4.6".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-sonnet-4-6-thinking".to_string(),
@@ -554,6 +572,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Sonnet 4.6 (Thinking)".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-opus-4-5-20251101".to_string(),
@@ -563,6 +582,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Opus 4.5".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-opus-4-5-20251101-thinking".to_string(),
@@ -572,6 +592,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Opus 4.5 (Thinking)".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-sonnet-4-5-20250929".to_string(),
@@ -581,6 +602,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Sonnet 4.5".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-sonnet-4-5-20250929-thinking".to_string(),
@@ -590,6 +612,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Sonnet 4.5 (Thinking)".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-haiku-4-5-20251001".to_string(),
@@ -599,6 +622,7 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Haiku 4.5".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
         Model {
             id: "claude-haiku-4-5-20251001-thinking".to_string(),
@@ -608,8 +632,18 @@ fn available_models() -> Vec<Model> {
             display_name: "Claude Haiku 4.5 (Thinking)".to_string(),
             model_type: "chat".to_string(),
             max_tokens: 64000,
+            max_input_tokens: 0, // 由 available_models() 末尾按模型统一回填
         },
-    ]
+    ];
+
+    // 按模型统一回填上下文窗口（max_input_tokens），复用 map_model 的映射逻辑，
+    // 确保 /v1/models 上报的窗口与实际下发上游的模型能力一致（如 opus-5 = 1M）。
+    // 这样 Claude Code 等客户端能正确识别 1M 上下文，而非回退到保守默认值。
+    for model in &mut models {
+        model.max_input_tokens = get_context_window_size(&model.id);
+    }
+
+    models
 }
 
 /// GET /v1/models
@@ -1051,8 +1085,6 @@ fn stream_trace_usage(ctx: &StreamContext) -> TraceUsage {
         credits: if ctx.credits.is_finite() && ctx.credits > 0.0 { ctx.credits } else { 0.0 },
     }
 }
-
-use super::converter::get_context_window_size;
 
 /// 处理非流式请求
 async fn handle_non_stream_request(
@@ -2017,5 +2049,30 @@ mod tests {
         assert!(ids.contains(&"claude-sonnet-4-8-thinking"));
         assert!(ids.contains(&"claude-opus-5"));
         assert!(ids.contains(&"claude-opus-5-thinking"));
+    }
+
+    #[test]
+    fn available_models_report_context_window() {
+        let models = available_models();
+        let by_id = |id: &str| {
+            models
+                .iter()
+                .find(|m| m.id == id)
+                .unwrap_or_else(|| panic!("model {id} missing"))
+        };
+
+        // opus-5 必须上报 1M 上下文，供 Claude Code 等客户端识别
+        assert_eq!(by_id("claude-opus-5").max_input_tokens, 1_000_000);
+        assert_eq!(by_id("claude-opus-5-thinking").max_input_tokens, 1_000_000);
+        // 其它 1M 模型同样上报
+        assert_eq!(by_id("claude-opus-4-8").max_input_tokens, 1_000_000);
+        assert_eq!(by_id("claude-sonnet-5").max_input_tokens, 1_000_000);
+        // 200K 模型保持 200K
+        assert_eq!(
+            by_id("claude-sonnet-4-5-20250929").max_input_tokens,
+            200_000
+        );
+        // 不应有模型漏填（回填后不再为 0）
+        assert!(models.iter().all(|m| m.max_input_tokens > 0));
     }
 }
